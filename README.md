@@ -4,11 +4,10 @@
 Weeks ago, [u/emozilla](https://www.reddit.com/user/emozilla) proposed an improvement on NTK-Aware RoPR in this [post](https://www.reddit.com/r/LocalLLaMA/comments/14mrgpr/dynamically_scaled_rope_further_increases/), later named DynamicNTKScalingRotaryEmbedding. The main idea behind Dynamic NTK involves incorporating a scaling factor relative to the present decoding sequence length to improve the base functionality.
 However, there is actually a subtle gap between how we compute perplexity and how the LLM actually generates code. 
 
-If you are using the DynamicNTKRope implemented by [Huggingface](https://github.com/huggingface/transformers/blob/b257c46a075419c09e5ce5c5aa39bc346ecdb9a5/src/transformers/models/llama/modeling_llama.py#L147) to compute perplexity, the sequence length remains fixed, and no key cache is required. As a result, there are no rotation base inconsistencies.
+If you are using the DynamicNTKRope implemented by Huggingface, the sequence length remains fixed when calculating perplexity, and no key cache is required. As a result, there are no rotation base inconsistencies between keys.
+However, when LLM starts generation token by token beyond its maximum trained length, the sequence length increases and each key is continually pushed into the key-value cache during decoding. Consequently, we have such a rotation inconsistency problem between keys.
 
-However, when LLM generates tokens beyond its maximum trained length for inference, the sequence length increases since each key continually pushed into the key-value cache during decoding. Consequently, we have such a rotation inconsistency problem.
-
-The current DynamicNTKRope is implemented as
+To put it clearly, the current DynamicNTKRope is implemented as
 
 <img src="doc/eq1.png" width="1000" height="60">
 
@@ -18,7 +17,7 @@ When decoding `sequence length = seq2`
 
 <img src="doc/eq2.png" width="600" height="60">
 
-As decoding sequence length increases,
+As decoding sequence length increases to `seq3`,
 
 <img src="doc/eq3.png" width="850" height="60">
 
