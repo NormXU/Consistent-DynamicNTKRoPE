@@ -20,7 +20,7 @@ When decoding `sequence length = seq2`
 
 As decoding sequence length increases,
 
-<img src="doc/eq3.png" width="800" height="60">
+<img src="doc/eq3.png" width="850" height="60">
 
 Please check [this post](https://www.reddit.com/r/LocalLLaMA/comments/155bexn/a_potential_rotation_inconsistency_of_dynamically/) for more details.
 
@@ -32,19 +32,15 @@ from transformers import AutoTokenizer, LlamaForCausalLM
 import torch
 from scale_rope.consistent_rope_for_llama_patch import replace_llama_attn_with_consistent_ntk_rope
 
-device = torch.device("cuda:7")
+model = LlamaForCausalLM.from_pretrained(PATH_TO_CONVERTED_WEIGHTS)
+tokenizer = AutoTokenizer.from_pretrained(PATH_TO_CONVERTED_TOKENIZER)
 
-model = LlamaForCausalLM.from_pretrained("/home/ysocr/data/pretrain/opt/opt-125m",
-                                         torch_dtype=torch.float16,
-                                         ).to(device)
-tokenizer = AutoTokenizer.from_pretrained("/home/ysocr/data/pretrain/opt/opt-125m")
-
-prompt = "Hey, are you consciours? Can you talk to me?"
+prompt = "Hey, are you conscious? Can you talk to me?"
 inputs = tokenizer(prompt, return_tensors="pt")
 
 replace_llama_attn_with_consistent_ntk_rope()
-
 # Generate
-generate_ids = model.generate(inputs.input_ids.to(device), max_length=30)
+generate_ids = model.generate(inputs.input_ids, max_length=30)
+tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
 
 ```
