@@ -6,7 +6,7 @@ However, there is actually a subtle gap between how we compute perplexity and ho
 
 If you are using the DynamicNTKRope implemented by [Huggingface](https://github.com/huggingface/transformers/blob/b257c46a075419c09e5ce5c5aa39bc346ecdb9a5/src/transformers/models/llama/modeling_llama.py#L147) to compute perplexity, the sequence length remains fixed, and no key cache is required. As a result, there are no rotation base inconsistencies.
 
-However, when LLM generates tokens beyond its maximum trained length for perplexity computation, the sequence length increases and each key pushed into the key-value cache during decoding uses a different rotation base. Consequently, we have such a rotation inconsistency problem.
+However, when LLM generates tokens beyond its maximum trained length for inference, the sequence length increases since each key continually pushed into the key-value cache during decoding. Consequently, we have such a rotation inconsistency problem.
 
 The current DynamicNTKRope is implemented as
 
