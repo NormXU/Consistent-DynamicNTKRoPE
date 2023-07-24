@@ -12,8 +12,7 @@ import numpy as np
 import torch
 from torch.nn import CrossEntropyLoss
 from tqdm import tqdm
-from transformers import AutoConfig, BitsAndBytesConfig
-from networks.mytransformers.llama_edited_for_inconsist import LlamaForCausalLM
+from transformers import AutoConfig, BitsAndBytesConfig, AutoModelForCausalLM
 from transformers import AutoTokenizer
 from scale_rope.inconsistent_rope_for_perplexity import replace_llama_attn_with_inconsistent_ntk_rope_for_ppl
 
@@ -39,7 +38,7 @@ def load_model(model, args):
         quantization_config = None
         torch_dtype = torch.bfloat16
 
-    loaded = LlamaForCausalLM.from_pretrained(
+    loaded = AutoModelForCausalLM.from_pretrained(
         model,
         torch_dtype=torch_dtype,
         device_map="sequential",

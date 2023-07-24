@@ -44,3 +44,26 @@ generate_ids = model.generate(inputs.input_ids, max_length=30)
 tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
 
 ```
+
+## PPL Test
+To bridge the gap between perplexity evaluation and decoding, a patch of ``replace_llama_attn_with_inconsistent_ntk_rope_for_ppl`` is made in the directory ```scale_rope/inconsistent_rope_for_perplexity```. In ``eval_ppl.py``, set ``inconsistent_dntk`` as ``True`` to enable the patch.
+This patch change the Rotation on Key and Query as below:
+
+![ppl test](doc/inconsistent.png)
+
+As shown in the figure 1, when keeping consistency between the rotary computation of perplexity evaluation and the decoding process, the perplexity significantly increases.
+
+**Figure 1**
+![ppl test](doc/ppl.png)
+
+
+**Table1:** PPL Value
+
+| Lenth | Consistent PPL     | Inconsistent PPL    | NTK PPL          |
+| ----- | ------------------ | ------------------  | ---------------- |
+| 2800  | 4.285102386474609  | 10.203343925476075   | 4.301338438987732 |
+| 3600  | 4.371902356147766  | 9.213108296394347    | 5.401671919822693 |
+| 5600  | 4.536222472190857  | 8.04413757801056     | 10.291163015365601 |
+| 7200  | 4.7303602981567385 | 7.674421100616455    | 15.359781618118285 |
+| 8000  | 4.932255864143372  | 7.7100021314620975   | 15.884212293624877 |
+

@@ -1,4 +1,5 @@
 # -*- coding:utf-8 -*-
+# email:xunuo@datagrand.com
 # create: @time: 7/22/23 13:02
 import math
 from typing import List, Optional, Tuple, Union
@@ -8,7 +9,7 @@ import torch.nn.functional as F
 import torch.utils.checkpoint
 from torch import nn
 from transformers.models.llama.modeling_llama import repeat_kv, rotate_half
-from models.modeling_llama import LlamaAttention
+from transformers.models.llama.modeling_llama import LlamaAttention
 
 
 def apply_rotary_pos_emb(q, cos, sin, position_ids):
@@ -59,25 +60,25 @@ def forward(
     kv_seq_len = key_states.shape[-2]
     trained_max_seq = min(self.max_position_embeddings, kv_seq_len)
 
-    cos, sin = self.rotary_emb(value_states, seq_len=kv_seq_len)
-    # rotate to the max trained sequence
+    # compute rotation matrix before 2048
+    cos, sin = self.rotary_emb(value_states, seq_len=trained_max_seq)
     inconsistent_key_states = apply_rotary_pos_emb(key_states[:, :, :trained_max_seq, :],
                                                    cos, sin, position_ids[:, :trained_max_seq])
-    # rotate the query
-    query_states = apply_rotary_pos_emb(query_states, cos, sin, position_ids)
-
     if past_key_value is not None:
         kv_seq_len += past_key_value[0].shape[-2]
 
-    if kv_seq_len > self.max_position_embeddings:
-        for seq_idx in range(self.max_position_embeddings, kv_seq_len):
-            # recompute the rotation matrix with a different base
-            cos, sin = self.rotary_emb(value_states, seq_len=seq_idx + 1, recompute=True)
+    if kv_seq_len > 2048:
+        for seq_idx in range(2048, kv_seq_len):
+            # the rotation base from 2048 ~ kv_seq_len varys with respect to seq_len
+            cos, sin = self.rotary_emb(value_states, seq_len=seq_idx + 1)
             k_embed = apply_rotary_pos_emb(key_states[:, :, seq_idx, :].unsqueeze(-2),
                                            cos, sin,
                                            position_ids[:, seq_idx].unsqueeze(0))
             inconsistent_key_states = torch.cat([inconsistent_key_states, k_embed], dim=2)
 
+    # rotate query_states
+    cos, sin = self.rotary_emb(value_states, seq_len=kv_seq_len)
+    query_states = apply_rotary_pos_emb(query_states, cos, sin, position_ids)
     key_states = inconsistent_key_states
 
     if past_key_value is not None:
