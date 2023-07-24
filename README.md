@@ -53,8 +53,8 @@ The inconsistent_ntk patch changes the rotary computation on Key and Query as be
 ![ppl test](doc/inconsistent.png)
 
 
-Interestingly, as shown in the figure 1, when enabling the patch, the perplexity value of inconsistent Dynamic NTKScale RoPE significantly increases. However, as the sequence length continues to grow, we can find in Table 1 that the perplexity value gradually decreases. Notably, the inconsistent Dynamic NTKScale RoPE outperforms the NTKScale RoPE in perplexity when the sequence length exceeds 5,000.
-
+We can see from Figure1 that when keeping the rotation base between keys inconsistent w.r.t context length, the perplexity significantly increases, indicating DynamicNTK harms the performances. This finding might initially seem counterintuitive.  
+However, as the sequence length continues to grow, we can notice a gradual reduction in perplexity for inconsistent Dynamic NTKScale RoPE .  Interestingly, the inconsistent Dynamic NTKScale RoPE outperforms the NTKScale RoPE in terms of perplexity when the sequence length exceeds 5,000. 
 ![ppl test](doc/ppl.png)
 
 
