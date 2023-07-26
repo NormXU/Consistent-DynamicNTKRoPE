@@ -51,11 +51,14 @@ A patch, ``replace_llama_attn_with_inconsistent_ntk_rope_for_ppl`` is applied to
 The inconsistent_ntk patch changes the rotary computation on Key and Query as below:
 
 ![ppl test](doc/inconsistent.png)
-K(\alpha(x)) means, k is rotated by a rotation matrix whose base is a fuction of n
 
-We can see from Figure1 that when keeping the rotation base between keys inconsistent w.r.t context length, the perplexity significantly increases, indicating DynamicNTK harms the performances. This finding might initially seem counterintuitive.  
+$K(\alpha(x))$ means, $k$ is rotated by a rotation matrix whose base is a function of $n$
+
+We can see from the figure below that when keeping the rotation base between keys inconsistent w.r.t context length, the perplexity significantly increases, indicating DynamicNTK harms the performances. This finding might initially seem counterintuitive.  
 However, as the sequence length continues to grow, we can notice a gradual reduction in perplexity for inconsistent Dynamic NTKScale RoPE .  Interestingly, the inconsistent Dynamic NTKScale RoPE outperforms the NTKScale RoPE in terms of perplexity when the sequence length exceeds 5,000. 
+
 ![ppl test](doc/ppl.png)
+**Figure1**, Perplexity value on Llama1-7B, an 2k max sequence length model, values above 12.0 are cut off for concise; Vanilla: RoPE w/o any interpolation; NTK: DynamicNTK when scale=1; Consistent DynamicNTK: keep rotation base between keys consistent, current huggingface implementations; Inconsistent DynamicNTK: keep rotation base between keys inconsistent w.r.t context length;
 
 
 **Table 1:** PPL Value of Different NTKScale Methods
