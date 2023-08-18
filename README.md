@@ -22,7 +22,7 @@ As decoding sequence length increases to `seq3`,
 
 <img src="doc/eq3.png" width="850" height="60">
 
-Please check [this post](https://www.reddit.com/r/LocalLLaMA/comments/155bexn/a_potential_rotation_inconsistency_of_dynamically/) for more details.
+Please check [this blog](https://normxu.github.io/A-Potential-Rotation-Inconsistency-of-Dynamic-Scaled-RoPE/) for more details.
 
 
 ## How to use
