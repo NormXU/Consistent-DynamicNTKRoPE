@@ -10,6 +10,19 @@ from torch import nn
 from transformers.models.llama.modeling_llama import repeat_kv, apply_rotary_pos_emb
 from transformers.models.llama.modeling_llama import LlamaAttention
 
+def apply_rotary_pos_emb_fix(q, k, cos, sin, q_position_ids, k_position_ids, unsqueeze_dim=1):
+    """position_ids( bsz, q_len)
+    """
+    cos_q = cos[q_position_ids].unsqueeze(unsqueeze_dim)
+    sin_q = sin[q_position_ids].unsqueeze(unsqueeze_dim)
+    q_embed = (q * cos_q) + (rotate_half(q) * sin_q)
+    
+    cos_k = cos[k_position_ids].unsqueeze(unsqueeze_dim)
+    sin_k = sin[k_position_ids].unsqueeze(unsqueeze_dim)
+    k_embed = (k * cos_k) + (rotate_half(k) * sin_k)
+    return q_embed, k_embed
+
+
 def forward(
         self,
         hidden_states: torch.Tensor,
@@ -54,9 +67,14 @@ def forward(
         # reuse k w/o RoPE
         key_states = torch.cat([past_key_value[0], key_states], dim=2)
 
-    # apply RoPE after retrieving all keys and queries
-    query_states, rotated_key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin, position_ids)
-
+    # add support for the use_cache=True，it would reduce time consumption.
+    if past_key_value is not None and q_len == 1:
+        key_position_ids = torch.arange(0, kv_seq_len, 1).repeat(bsz, 1)  # the length of query_states is only 1, but key_states is the whole seq len.
+        query_states, rotated_key_states = apply_rotary_pos_emb_fix(query_states, key_states, cos, sin, position_ids, key_position_ids)
+    else:
+        # apply RoPE after retrieving all keys and queries
+        query_states, rotated_key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin, position_ids)
+            
     if past_key_value is not None:
         # reuse v, self_attention
         value_states = torch.cat([past_key_value[1], value_states], dim=2)
