@@ -9,7 +9,13 @@ import torch.utils.checkpoint
 from torch import nn
 from transformers.models.llama.modeling_llama import repeat_kv, rotate_half
 from transformers.models.llama.modeling_llama import LlamaAttention
+"""
+# consistent Dynamic RoPE pipeline
+1. compute cos/sin, for cos/sin whose pos_id > max_seq_len, recompute all these values when seq_len increases
+2. cache keys and values before rotation
+3. when decoding rotate query at seq_len, while rotate keys from (0, seq_len)
 
+"""
 
 def apply_rotary_pos_emb_fix(q, k, cos, sin, q_position_ids, k_position_ids):
     """position_ids( bsz, q_len)
