@@ -1,24 +1,27 @@
 # -*- coding:utf-8 -*-
 # create: @time: 7/22/23 13:02
 import math
-from typing import List, Optional, Tuple, Union
+from typing import Optional, Tuple
 
 import torch
 import torch.nn.functional as F
 import torch.utils.checkpoint
 from torch import nn
-from transformers.models.llama.modeling_llama import repeat_kv, apply_rotary_pos_emb
+from transformers.models.llama.modeling_llama import repeat_kv, rotate_half
 from transformers.models.llama.modeling_llama import LlamaAttention
 
-def apply_rotary_pos_emb_fix(q, k, cos, sin, q_position_ids, k_position_ids, unsqueeze_dim=1):
+
+def apply_rotary_pos_emb_fix(q, k, cos, sin, q_position_ids, k_position_ids):
     """position_ids( bsz, q_len)
     """
-    cos_q = cos[q_position_ids].unsqueeze(unsqueeze_dim)
-    sin_q = sin[q_position_ids].unsqueeze(unsqueeze_dim)
+    cos = cos.squeeze(1).squeeze(0)
+    sin = sin.squeeze(1).squeeze(0)
+    cos_q = cos[q_position_ids].unsqueeze(1)
+    sin_q = sin[q_position_ids].unsqueeze(1)
     q_embed = (q * cos_q) + (rotate_half(q) * sin_q)
-    
-    cos_k = cos[k_position_ids].unsqueeze(unsqueeze_dim)
-    sin_k = sin[k_position_ids].unsqueeze(unsqueeze_dim)
+
+    cos_k = cos[k_position_ids].unsqueeze(1)
+    sin_k = sin[k_position_ids].unsqueeze(1)
     k_embed = (k * cos_k) + (rotate_half(k) * sin_k)
     return q_embed, k_embed
 
@@ -67,19 +70,17 @@ def forward(
         # reuse k w/o RoPE
         key_states = torch.cat([past_key_value[0], key_states], dim=2)
 
-    # add support for the use_cache=True，it would reduce time consumption.
-    if past_key_value is not None and q_len == 1:
-        key_position_ids = torch.arange(0, kv_seq_len, 1).repeat(bsz, 1)  # the length of query_states is only 1, but key_states is the whole seq len.
-        query_states, rotated_key_states = apply_rotary_pos_emb_fix(query_states, key_states, cos, sin, position_ids, key_position_ids)
-    else:
-        # apply RoPE after retrieving all keys and queries
-        query_states, rotated_key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin, position_ids)
-            
+    # apply RoPE after retrieving all keys and queries
+    key_position_ids = torch.arange(0, kv_seq_len, 1).repeat(bsz, 1)
+    query_states, rotated_key_states = apply_rotary_pos_emb_fix(query_states, key_states, cos, sin,
+                                                                position_ids, # when decoding, the length of query_states is only 1,
+                                                                key_position_ids) # but key_states is the whole seq len.
+
     if past_key_value is not None:
         # reuse v, self_attention
         value_states = torch.cat([past_key_value[1], value_states], dim=2)
 
-    past_key_value = (key_states, value_states) if use_cache else None # cache the key w/o RoPE
+    past_key_value = (key_states, value_states) if use_cache else None  # cache the key w/o RoPE
 
     # repeat k/v heads if n_kv_heads < n_heads
     rotated_key_states = repeat_kv(rotated_key_states, self.num_key_value_groups)
